@@ -50,6 +50,7 @@ echo "ms-dns 8.8.4.4" >> /etc/ppp/options.pptpd
 ip=`ifconfig eth0 | grep 'inet ' | awk {'print $2'} | sed s/.*://`
 
 # Set IP for server & user
+echo "option /etc/ppp/options.pptpd" >> /etc/pptpd.conf
 echo "localip $ip" >> /etc/pptpd.conf
 echo "remoteip 10.1.0.1-100" >> /etc/pptpd.conf
 
@@ -68,6 +69,7 @@ read password
 echo "$username pptpd $password *" >> /etc/ppp/chap-secrets
 
 # Restart PPTPD to reload all config
+chkconfig pptpd on
 service pptpd restart
 
 # Forward packet between localip and remoteip
