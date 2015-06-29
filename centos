@@ -4,18 +4,50 @@ echo "###################################"
 echo "This script will configure PPTP VPN"
 echo "###################################"
 
+RELEASEVER=`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`
+
+
+if [ $RELEASEVER -eq 7 ]; then
+	echo "== You are using el$RELEASEVER, using fedora epel 7.5 repo"
+	rpm -i http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+elif [ $RELEASEVER -eq 6 ]; then
+	echo "== You are using el$RELEASEVER, using poptop official rgel6 yum repo"
+	rpm -i http://poptop.sourceforge.net/yum/stable/rhel6/pptp-release-current.noarch.rpm
+elif [ $RELEASEVER -gt 7 ]; then
+	echo "== You are using el$RELEASEVER, using fedora epel 7.5 repo. IT IS NOT TESTET YET."
+	read -p "Are you sure?(y/n) " -n 1 -r
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
+		rpm -i http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+		echo
+		echo "Version > 7, go fedora epel 7.5 repo"
+	else
+		echo
+    	exit 1
+	fi
+elif [ $RELEASEVER -lt 6 ]; then
+	echo "== You are using el$RELEASEVER, using poptop official rgel6 yum repo. IT IS NOT TESTET YET."
+	read -p "Are you sure?(y/n)  " -n 1 -r
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
+		rpm -i http://poptop.sourceforge.net/yum/stable/rhel6/pptp-release-current.noarch.rpm
+		echo
+		echo "Version < 6, go official poptop rhel6 rpm"
+	else
+		echo
+    	exit 1
+	fi
+fi
 # Install RPM that we going to use
-rpm -i http://poptop.sourceforge.net/yum/stable/rhel6/pptp-release-current.noarch.rpm
+#rpm -i http://poptop.sourceforge.net/yum/stable/rhel6/pptp-release-current.noarch.rpm
 
 # Install PPTP daemon service
 yum -y install pptpd
 
 # Set DNS
-echo "ms-dns 8.8.8.8" >> /etc/ppp/pptpd-options
-echo "ms-dns 8.8.4.4" >> /etc/ppp/pptpd-options
+echo "ms-dns 8.8.8.8" >> /etc/ppp/options.pptpd
+echo "ms-dns 8.8.4.4" >> /etc/ppp/options.pptpd
 
 # Get server IP
-ip=`ifconfig eth0 | grep 'inet addr' | awk {'print $2'} | sed s/.*://`
+ip=`ifconfig eth0 | grep 'inet ' | awk {'print $2'} | sed s/.*://`
 
 # Set IP for server & user
 echo "localip $ip" >> /etc/pptpd.conf
@@ -47,6 +79,7 @@ sysctl -p
 # Allow PPTP traffic on iptables
 service iptables start
 echo "iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE" >> /etc/rc.local
+chmod +x /etc/rc.d/rc.local
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 service iptables save
 service iptables restart
